@@ -25,13 +25,13 @@ type Signature struct {
 }
 
 // 获取签名（加密）
-func RequestCmdb(uri string, ip string, method MethodStr, params interface{}) string{
+func RequestCmdb(uri string, ip string, method MethodStr, params interface{}) []byte {
 	// 请求地址
 	reqUrl := ip + uri
 	// 时间戳
 	requestTime := time.Now().Unix()
 	var bytesData []byte
-	if params !=nil && params != "" {
+	if params != nil && params != "" {
 		bytesData, _ = json.Marshal(params)
 	}
 	// 创建签名
@@ -61,19 +61,19 @@ func RequestCmdb(uri string, ip string, method MethodStr, params interface{}) st
 	} else {
 		urlParams = HttpBuildQuery(keys)
 	}
-	if urlParams != ""  {
+	if urlParams != "" {
 		if find := strings.Contains(reqUrl, "?"); find {
 			reqUrl = reqUrl + "&" + urlParams
 		} else {
 			reqUrl = reqUrl + "?" + urlParams
 		}
 	}
-/*	fmt.Println("\n reqUrl ==>",reqUrl,bytesData)
-	fmt.Println("new_str1",bytes.NewBuffer(bytesData))
-	fmt.Println("new_str2",bytes.NewReader(bytesData))
-	fmt.Println("new_str3",string(bytesData))
-*/
-	req, err := http.NewRequest(string(method), reqUrl,bytes.NewBuffer(bytesData))
+	/*	fmt.Println("\n reqUrl ==>",reqUrl,bytesData)
+		fmt.Println("new_str1",bytes.NewBuffer(bytesData))
+		fmt.Println("new_str2",bytes.NewReader(bytesData))
+		fmt.Println("new_str3",string(bytesData))
+	*/
+	req, err := http.NewRequest(string(method), reqUrl, bytes.NewBuffer(bytesData))
 	req.Host = "openapi.easyops-only.com"
 	req.Header.Add("Content-Type", "application/json")
 	// 发送请求
@@ -84,8 +84,8 @@ func RequestCmdb(uri string, ip string, method MethodStr, params interface{}) st
 	if err != nil {
 		fmt.Println(" handle error===>", err)
 	}
-	fmt.Println("请求返回状态码：：",resp.StatusCode,"请求返回数据：：：",string(body))
-	return  string(body)
+	fmt.Println("请求返回状态码：：", resp.StatusCode, "请求返回数据：：：", string(body))
+	return body
 }
 
 // 生产signature信息
@@ -106,12 +106,12 @@ func createSignature(sign Signature) string {
 				urlParamsArray = append(urlParamsArray, k+data[k])
 			}
 			urlParams = strings.Join(urlParamsArray, "")
-			fmt.Println("\nurlParams =>>>>>",urlParams)
+			fmt.Println("\nurlParams =>>>>>", urlParams)
 		}
 	}
 	if sign.Method == MethodStrPOST || sign.Method == MethodStrPUT {
 		if data, ok := sign.Data.(string); ok {
-			fmt.Print("sign.Data===>",data)
+			fmt.Print("sign.Data===>", data)
 			bodyContent = Md5([]byte(data))
 			//bodyContent = md5V2(data)
 		} else {
@@ -123,7 +123,6 @@ func createSignature(sign Signature) string {
 			//fmt.Print("replace=>",replace)
 			marshal, _ := json.Marshal(sign.Data)
 			bodyContent = Md5String(string(marshal))
-			
 
 		}
 	}
@@ -137,10 +136,9 @@ func createSignature(sign Signature) string {
 		sign.AccessKey,
 	}
 	strSign := strings.Join(signData, "\n")
-	fmt.Println("\n strSign ==>",strSign)
+	fmt.Println("\n strSign ==>", strSign)
 	return HmacSha1([]byte(sign.SecretKey), strSign)
 }
-
 
 func md5V2(str string) string {
 	data := []byte(str)
