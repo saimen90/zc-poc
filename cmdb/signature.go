@@ -25,7 +25,7 @@ type Signature struct {
 }
 
 // 获取签名（加密）
-func RequestCmdb(uri string, ip string, method MethodStr, params interface{}) {
+func RequestCmdb(uri string, ip string, method MethodStr, params interface{}) string{
 	// 请求地址
 	reqUrl := ip + uri
 	// 时间戳
@@ -56,7 +56,7 @@ func RequestCmdb(uri string, ip string, method MethodStr, params interface{}) {
 		} else {
 			urlParams = HttpBuildQuery(keys)
 			//urlParams = HttpBuildQuery(keys)
-			urlParams = "accesskey="+AccessKey+"&signature="+signature+"&expires="+keys["expires"]
+			//urlParams = "accesskey="+AccessKey+"&signature="+signature+"&expires="+keys["expires"]
 		}
 	} else {
 		urlParams = HttpBuildQuery(keys)
@@ -68,27 +68,24 @@ func RequestCmdb(uri string, ip string, method MethodStr, params interface{}) {
 			reqUrl = reqUrl + "?" + urlParams
 		}
 	}
-
-	fmt.Println("\n reqUrl ==>",reqUrl,bytesData)
+/*	fmt.Println("\n reqUrl ==>",reqUrl,bytesData)
 	fmt.Println("new_str1",bytes.NewBuffer(bytesData))
 	fmt.Println("new_str2",bytes.NewReader(bytesData))
 	fmt.Println("new_str3",string(bytesData))
-
+*/
 	req, err := http.NewRequest(string(method), reqUrl,bytes.NewBuffer(bytesData))
 	req.Host = "openapi.easyops-only.com"
 	req.Header.Add("Content-Type", "application/json")
 	// 发送请求
-	// return
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	//defer req.Body.Close()
-
-
 	body, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
 	if err != nil {
 		fmt.Println(" handle error===>", err)
 	}
 	fmt.Println("请求返回状态码：：",resp.StatusCode,"请求返回数据：：：",string(body))
+	return  string(body)
 }
 
 // 生产signature信息

@@ -17,8 +17,10 @@ func HmacSha1(key []byte,data string)  string{
 
 
 func main() {
+	test_app()
 
-	cmdb.RequestCmdb("/cmdb/toolkit/tools/APP",cmdb.EasyopsOpenApiHost,cmdb.MethodStrGet, "")
+	business_search()
+
 	fmt.Println("CMDB、ITSM、YOUWEI、CONTAINER")
 }
 
@@ -46,4 +48,9 @@ func business_search()  {
 	businessParams["page_size"] = 3000
 	businessParams["page"] = 1
 	cmdb.RequestCmdb("/cmdb/object/BUSINESS/instance/_search",cmdb.EasyopsOpenApiHost,cmdb.MethodStrPOST, businessParams)
+}
+
+// 测试-调试使用
+func test_app()  {
+	cmdb.RequestCmdb("/cmdb/toolkit/tools/APP",cmdb.EasyopsOpenApiHost,cmdb.MethodStrGet, "")
 }
