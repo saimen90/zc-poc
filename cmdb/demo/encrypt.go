@@ -1,4 +1,4 @@
-package cmdb
+package demo
 
 import (
 	"crypto/hmac"

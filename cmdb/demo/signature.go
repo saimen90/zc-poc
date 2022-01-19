@@ -1,4 +1,4 @@
-package cmdb
+package demo
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"crypto/md5"
+	"time"
 )
 
 // 签名构建
@@ -24,20 +25,14 @@ type Signature struct {
 }
 
 // 获取签名（加密）
-func RequestCmdb(uri string, ip string, method MethodStr, params interface{}) {
+func RequestCmdb(uri string, ip string, method MethodStr, params interface{}) string{
 	// 请求地址
 	reqUrl := ip + uri
 	// 时间戳
-	requestTime := int64(1642509454) //time.Now().Unix()
-	fmt.Print("requestTime===>",requestTime)
-	bytesData, err := json.Marshal(params)
-	if paramsData, ok := params.(string); ok {
-		fmt.Print("json字符串：：",paramsData)
-		bytesData = []byte(paramsData)
-	}
-	if err != nil {
-		fmt.Println(err.Error())
-		return
+	requestTime := time.Now().Unix()
+	var bytesData []byte
+	if params !=nil && params != "" {
+		bytesData, _ = json.Marshal(params)
 	}
 	// 创建签名
 	signature := createSignature(Signature{
@@ -56,40 +51,41 @@ func RequestCmdb(uri string, ip string, method MethodStr, params interface{}) {
 	keys["expires"] = strconv.FormatInt(requestTime, 10)
 	var urlParams string
 	if method == MethodStrGet || method == MethodStrDELETE {
-		m := params.(map[string]string)
-		urlParams = HttpBuildQuery(m) + "&" + HttpBuildQuery(keys)
+		if data, ok := params.(map[string]string); ok {
+			urlParams = HttpBuildQuery(data) + "&" + HttpBuildQuery(keys)
+		} else {
+			urlParams = HttpBuildQuery(keys)
+			//urlParams = HttpBuildQuery(keys)
+			//urlParams = "accesskey="+AccessKey+"&signature="+signature+"&expires="+keys["expires"]
+		}
 	} else {
 		urlParams = HttpBuildQuery(keys)
 	}
-	if find := strings.Contains(reqUrl, "?"); find {
-		reqUrl = reqUrl + "&" + urlParams
-	} else {
-		reqUrl = reqUrl + "?" + urlParams
+	if urlParams != ""  {
+		if find := strings.Contains(reqUrl, "?"); find {
+			reqUrl = reqUrl + "&" + urlParams
+		} else {
+			reqUrl = reqUrl + "?" + urlParams
+		}
 	}
-	fmt.Println("\n reqUrl ==>",reqUrl,bytesData)
+/*	fmt.Println("\n reqUrl ==>",reqUrl,bytesData)
 	fmt.Println("new_str1",bytes.NewBuffer(bytesData))
 	fmt.Println("new_str2",bytes.NewReader(bytesData))
 	fmt.Println("new_str3",string(bytesData))
-
-	req, err := http.NewRequest("POST", reqUrl, bytes.NewReader(bytesData))
-	req.Header.Set("Host", "openapi.easyops-only.com")
-	//req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Content-Type", "application/json;charset=UTF-8")
-	marshal, _ := json.Marshal(params)
-	req.Header.Set("Content-MD5", Md5(marshal))
-
+*/
+	req, err := http.NewRequest(string(method), reqUrl,bytes.NewBuffer(bytesData))
+	req.Host = "openapi.easyops-only.com"
+	req.Header.Add("Content-Type", "application/json")
 	// 发送请求
-	// return
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	defer req.Body.Close()
-
-
 	body, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
 	if err != nil {
 		fmt.Println(" handle error===>", err)
 	}
-	fmt.Println("请求返回状态码：：",resp.StatusCode,"请求返回数据：：：",body, string(body))
+	fmt.Println("请求返回状态码：：",resp.StatusCode,"请求返回数据：：：",string(body))
+	return  string(body)
 }
 
 // 生产signature信息

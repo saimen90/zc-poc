@@ -1,4 +1,4 @@
-package cmdb
+package demo
 
 // API 秘钥管理
 // access_key
