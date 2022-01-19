@@ -21,6 +21,6 @@ func TestGetProductAndModule(t *testing.T) {
 	params["bb"] = "3"
 
 	// RequestCmdb("/cmdb/object/BUSINESS/instance/_search",EasyopsOpenApiHost,MethodStrPOST,params)
-	RequestCmdb("/cmdb/object/BUSINESS/instance/_search",EasyopsOpenApiHost,MethodStrGet,params)
+	RequestCmdb("/cmdb/object/BUSINESS/instance/_search",EasyopsOpenApiHost,MethodStrPOST,params)
 
 }
