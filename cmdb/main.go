@@ -303,7 +303,7 @@ func pipeline_build_histoery() {
 	businessParams["page"] = "1"
 	businessParams["page_size"] = "3000"
 	businessParams["project_id"] = "596404f7fd420"  // 流水线项目ID 596404f7fd420
-	businessParams["pipeline_id"] = "" // 流水线ID   5d5ff3fcaffb4
+	// businessParams["pipeline_id"] = "5d5ff3fcaffb4" // 流水线ID   5d5ff3fcaffb4
 	businessParams["state"] = ""
 
 	requestCmdb := cmdb.RequestCmdb(uri, cmdb.EasyopsOpenApiHost, cmdb.MethodStrGet, businessParams)
