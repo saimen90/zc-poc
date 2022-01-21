@@ -25,11 +25,15 @@ func init() {
 
 func main() {
 
+
+	getPipelineDetail("测试应用","5d5ff3fcaffb4")
+	return
 	execute_pipelines()
 
-	return
+
 	search_app_project()
 
+	return
 	//get_pipeline()
 
 	business_search := business_search()
@@ -120,6 +124,54 @@ func search_app_project() string {
 	return ""
 }
 
+
+// 临时接口，开发时候（甲方配置流水线详情接口）
+func getPipelineDetail(projectName ,pipelineId string)  {
+	businessParams := make(map[string]interface{})
+	businessParams["sort"] = map[string]interface{}{
+		"name": 1,
+	}
+	businessParams["fields"] = map[string]interface{}{
+		"*":                          true,
+		"PIPELINE_PROJECT":           true,
+		"PIPELINE_PROJECT._PIPELINE": true,
+	}
+	businessParams["query"] = map[string]interface{}{
+		"name": map[string]interface{}{
+			"$in": []string{projectName},
+		},
+	}
+	// page_size 最大不能超过 3千 ，默认20个
+	businessParams["page_size"] = 3000
+	businessParams["page"] = 1
+	json_str := cmdb.RequestCmdb("/cmdb/object/APP/instance/_search", cmdb.EasyopsOpenApiHost, cmdb.MethodStrPOST, businessParams)
+	log.SetPrefix("\n\n[/cmdb/object/APP/instance/_search]返回结果::")
+	log.Println(string(json_str))
+
+	res, _ := simplejson.NewJson([]byte(json_str))
+	projects, _ := res.Get("data").Get("list").Array()
+	// 项目S
+	for i := range projects {
+		projectId, _ := res.Get("data").Get("list").GetIndex(i).Get("instanceId").String()
+		projectName, _ := res.Get("data").Get("list").GetIndex(i).Get("name").String()
+		fmt.Println("应用名称：",projectName,"应用ID：",projectId)
+		// 流水线S  #应用所拥有的流水线_代码项目
+		pipelines, _ := res.Get("data").Get("list").GetIndex(i).Get("PIPELINE_PROJECT").Array()
+		// fmt.Print(pipelines)
+		for _, pipeline := range pipelines {
+			if data, ok := pipeline.(map[string]interface{}); ok {
+				fmt.Println("流水线名称：",data["name"],"流水线ID：",data["instanceId"],"创建人",data["creator"],"创建时间",data["ctime"])
+				//  pipeline["_PIPELINE"] 流水线，变量variables
+				fmt.Print("流水线变量：",data["_PIPELINE"])
+
+			}
+		}
+	}
+
+}
+
+
+
 // 测试-调试使用
 func test_app() string {
 	res := cmdb.RequestCmdb("/cmdb/toolkit/tools/APP", cmdb.EasyopsOpenApiHost, cmdb.MethodStrGet, "")
@@ -140,13 +192,12 @@ func get_pipeline() {
 
 // （触发）执行流水线
 func execute_pipelines() string {
-	project_id := "5a3f2e1cdb2ff"
-	pipeline_id := "5a40382f43d16"
+	project_id := "596404f7fd420"
+	pipeline_id := "5d5ff3fcaffb4"
 	uri := fmt.Sprintf("/pipeline/api/pipeline/v1/projects/%s/pipelines/%s/execute", project_id, pipeline_id)
 	businessParams := make(map[string]interface{})
 
-
-	businessParams["branch"] = "master"
+	//businessParams["branch"] = "master"
 	// businessParams["tag"] = "aaaaaaaa"
 
 	// 流水线变量 [ variables ]
@@ -155,7 +206,7 @@ func execute_pipelines() string {
 	requestCmdb := cmdb.RequestCmdb(uri, cmdb.EasyopsOpenApiHost, cmdb.MethodStrPOST, businessParams)
 	log.SetPrefix("\n\n[/pipeline/api/pipeline/v1/projects/%s/pipelines/%s/execute]返回结果::")
 	log.Println(string(requestCmdb))
-
+	fmt.Println("触发流水线信息 ",string(requestCmdb))
 	return ""
 }
 
