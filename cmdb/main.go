@@ -10,6 +10,7 @@ import (
 	"zc-poc/go-simplejson"
 	"reflect"
 	"encoding/json"
+	"time"
 )
 
 // CMDB（优维系统）
@@ -27,9 +28,14 @@ func init() {
 
 func main() {
 
-	getPipelineDetail("测试应用", "5d5ff3fcaffb4")
+	// getPipelineDetail("测试应用", "5d5ff3fcaffb4")
 
-	execute_pipelines()
+	// 执行构建
+	runId := execute_pipelines()
+
+	// 构建日志
+	buildLog(runId)
+
 	return
 
 	search_app_project()
@@ -231,9 +237,60 @@ func execute_pipelines() string {
 	res, _ := simplejson.NewJson([]byte(requestCmdb))
 	runId, _ := res.Get("data").Get("id").String()
 	fmt.Print("运行的id：", runId)
-	return ""
+	return runId
 }
 
-//  终端控制输出
+// # 查看流水线构建日志
+func buildLog(runId string) {
+	for {
+		time.Sleep(time.Second * 2)
+		uri := fmt.Sprintf("/pipeline/api/pipeline/v1/builds/%s", runId)
+		requestCmdb := cmdb.RequestCmdb(uri, cmdb.EasyopsOpenApiHost, cmdb.MethodStrGet, "")
+
+		log.SetPrefix("\n\n[/pipeline/api/pipeline/v1/builds/]返回结果::")
+		log.Println(string(requestCmdb))
+		fmt.Print("构建日志", string(requestCmdb))
+		res, _ := simplejson.NewJson([]byte(requestCmdb))
+
+		// 执行状态 [pending \ succeeded 执行完成 \ failed 执行失败]
+		runSate, _ := res.Get("data").Get("status").Get("state").String()
+
+		var isBreak bool
+		if runSate == "succeeded" {
+			// 执行完成
+			isBreak = true
+		}
+		if runSate == "failed" {
+			// 流水线执行失败
+			isBreak = true
+		}
+		stages, _ := res.Get("data").Get("stages").Array()
+		for _, v := range stages {
+			if logInfo, ok := v.(map[string]interface{}); ok {
+				fmt.Println("步骤名称 : ", logInfo["stage_name"])
+				if steps, ok := logInfo["steps"].([]interface{}); ok {
+					for _, stepMap := range steps {
+						if step, ok := stepMap.(map[string]interface{}); ok {
+							uri := fmt.Sprintf("/pipeline/api/pipeline/v1/progress_log/%s", step["log_id"])
+							requestCmdb := cmdb.RequestCmdb(uri, cmdb.EasyopsOpenApiHost, cmdb.MethodStrGet, "")
+							log.SetPrefix("\n\n[/pipeline/api/pipeline/v1/progress_log]返回结果::")
+							log.Println(string(requestCmdb))
+
+							fmt.Print("日志信息请求信息：", string(requestCmdb))
+							res, _ := simplejson.NewJson([]byte(requestCmdb))
+							log, _ := res.Get("data").Get("logs").String()
+							fmt.Println("日志信息 : ", log)
+						}
+					}
+				}
+			}
+		}
+
+		if isBreak {
+			break
+		}
+
+	}
+}
 
 // 流水线执行记录
