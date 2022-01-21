@@ -28,6 +28,10 @@ func init() {
 
 func main() {
 
+	// 项目构建历史记录
+	pipeline_build_histoery()
+
+	return
 	// getPipelineDetail("测试应用", "5d5ff3fcaffb4")
 
 	// 执行构建
@@ -197,7 +201,7 @@ func test_app() string {
 	return string(res)
 }
 
-// 获取流水线信息
+// 获取流水线信息 （甲方 接口未配置）
 func get_pipeline() {
 	project_id := "5a3f2e1cdb2ff"  //项目ID
 	pipeline_id := "5a40382f43d16" //
@@ -285,12 +289,24 @@ func buildLog(runId string) {
 				}
 			}
 		}
-
 		if isBreak {
 			break
 		}
-
 	}
 }
 
-// 流水线执行记录
+// 项目构建历史记录
+func pipeline_build_histoery() {
+	uri := "/pipeline/api/pipeline/v1/builds"
+	businessParams := make(map[string]string)
+
+	businessParams["page"] = "1"
+	businessParams["page_size"] = "3000"
+	businessParams["project_id"] = "596404f7fd420"  // 流水线项目ID 596404f7fd420
+	businessParams["pipeline_id"] = "" // 流水线ID   5d5ff3fcaffb4
+	businessParams["state"] = ""
+
+	requestCmdb := cmdb.RequestCmdb(uri, cmdb.EasyopsOpenApiHost, cmdb.MethodStrGet, businessParams)
+	log.SetPrefix("\n\n[/pipeline/api/pipeline/v1/builds]返回结果::")
+	log.Println(string(requestCmdb))
+}
