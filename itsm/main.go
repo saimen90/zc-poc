@@ -21,7 +21,29 @@ func init() {
 }
 
 func main() {
+
+	search_where()
+
+	// search_all()
+}
+
+func search_all() {
 	requestItsm := itsm.RequestItsm("/api/misc/get_change_list", itsm.ItsmOpenApiHost, itsm.MethodStrGet, nil)
 	log.SetPrefix("[requestItsm结果]")
+	log.Println(requestItsm)
+}
+
+func search_where() {
+
+	businessParams := make(map[string]string)
+
+	businessParams["page"] = "1"
+	businessParams["page_size"] = "10"
+
+	businessParams["chg_app_id"] = "5a7a1f39e9801"    // 应用
+	businessParams["chg_system_id"] = "5a7a1fe531fcd" // 系统
+
+	requestItsm := itsm.RequestItsm("/api/misc/get_change_list", itsm.ItsmOpenApiHost, itsm.MethodStrGet, businessParams)
+	log.SetPrefix("[requestItsm 带条件查询 结果]")
 	log.Println(requestItsm)
 }
