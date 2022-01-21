@@ -8,8 +8,6 @@ import (
 	cmdb "zc-poc/cmdb/demo"
 
 	"zc-poc/go-simplejson"
-	"reflect"
-	"encoding/json"
 	"time"
 )
 
@@ -28,16 +26,17 @@ func init() {
 
 func main() {
 
+	getPipelineDetail("5d5ff3fcaffb4")
+
+	return
 	// 项目构建历史记录
 	pipeline_build_histoery()
 
 	return
-	// getPipelineDetail("测试应用", "5d5ff3fcaffb4")
 
-	// 执行构建
+	// （触发）执行流水线
 	runId := execute_pipelines()
-
-	// 构建日志
+	// 查看流水线构建日志
 	buildLog(runId)
 
 	return
@@ -135,80 +134,36 @@ func search_app_project() string {
 	return ""
 }
 
-// 临时接口，开发时候（甲方配置流水线详情接口）
-func getPipelineDetail(projectName, pipelineId string) {
+// 流水线详情
+func getPipelineDetail(pipelineId string) (map[string]interface{}, error) {
 	businessParams := make(map[string]interface{})
 	businessParams["sort"] = map[string]interface{}{
 		"name": 1,
 	}
 	businessParams["fields"] = map[string]interface{}{
-		"*":                          true,
-		"PIPELINE_PROJECT":           true,
-		"PIPELINE_PROJECT._PIPELINE": true,
+		"*": true,
 	}
 	businessParams["query"] = map[string]interface{}{
-		"name": map[string]interface{}{
-			"$in": []string{projectName},
+		"instanceId": map[string]interface{}{
+			"$in": []string{pipelineId},
 		},
 	}
 	// page_size 最大不能超过 3千 ，默认20个
 	businessParams["page_size"] = 3000
 	businessParams["page"] = 1
-	json_str := cmdb.RequestCmdb("/cmdb/object/APP/instance/_search", cmdb.EasyopsOpenApiHost, cmdb.MethodStrPOST, businessParams)
+	json_str := cmdb.RequestCmdb("/cmdb/object/_PIPELINE_PIPELINE/instance/_search", cmdb.EasyopsOpenApiHost, cmdb.MethodStrPOST, businessParams)
 	log.SetPrefix("\n\n[/cmdb/object/APP/instance/_search]返回结果::")
 	log.Println(string(json_str))
 
 	res, _ := simplejson.NewJson([]byte(json_str))
-	projects, _ := res.Get("data").Get("list").Array()
-	// 应用信息
-	for i := range projects {
-		projectId, _ := res.Get("data").Get("list").GetIndex(i).Get("instanceId").String()
-		projectName, _ := res.Get("data").Get("list").GetIndex(i).Get("name").String()
-		fmt.Println("应用名称：", projectName, "应用ID：", projectId)
-		// 流水线项目S  #应用所拥有的流水线_代码项目
-		pipelineProjects, _ := res.Get("data").Get("list").GetIndex(i).Get("PIPELINE_PROJECT").Array()
-		// fmt.Print(pipelines)
-		for _, pipelineProject := range pipelineProjects {
-			if data, ok := pipelineProject.(map[string]interface{}); ok {
-				fmt.Println("流水线项目名称：", data["name"], "流水线项目ID：", data["instanceId"], "创建人", data["creator"], "创建时间", data["ctime"])
-				//  pipeline["_PIPELINE"] 流水线，变量variables
+	pipeline, err := res.Get("data").Get("list").GetIndex(0).Map()
 
-				// 流水线项目下的 -> 流水线
-				if pipelines, ok := data["_PIPELINE"].([]interface{}); ok {
-					for _, v := range pipelines {
-						if pipeline, ok := v.(map[string]interface{}); ok {
-							fmt.Println("流水线可读名称：", pipeline["alias_name"], "流水线名称：", pipeline["name"], "流水线ID：", pipeline["instanceId"], "创建人", pipeline["creator"], "创建时间", pipeline["ctime"])
-
-							fmt.Println("类型", reflect.TypeOf(pipeline["variables"]))
-							bytes, _ := json.Marshal(pipeline["variables"])
-							fmt.Print("流水线变量：", string(bytes))
-
-						}
-					}
-				}
-
-			}
-		}
-	}
-
-}
-
-// 测试-调试使用
-func test_app() string {
-	res := cmdb.RequestCmdb("/cmdb/toolkit/tools/APP", cmdb.EasyopsOpenApiHost, cmdb.MethodStrGet, "")
-	log.SetPrefix("[test_app]")
-	log.Println(string(res))
-	return string(res)
-}
-
-// 获取流水线信息 （甲方 接口未配置）
-func get_pipeline() {
-	project_id := "5a3f2e1cdb2ff"  //项目ID
-	pipeline_id := "5a40382f43d16" //
-	uri := fmt.Sprintf("/pipeline/api/pipeline/v1/projects/%s/pipelines/%s", project_id, pipeline_id)
-	res := cmdb.RequestCmdb(uri, cmdb.EasyopsOpenApiHost, cmdb.MethodStrPOST, "")
-	log.SetPrefix("[get_pipeline]")
-	log.Println(res)
+	id := pipeline["instanceId"]
+	name := pipeline["name"]
+	aliasName := pipeline["alias_name"]
+	fmt.Println("流水线可读名称：", aliasName, "流水线名称：", name, "流水线ID：", id)
+	fmt.Print("流水线变量：", pipeline["variables"])
+	return pipeline, err
 }
 
 // （触发）执行流水线
@@ -247,7 +202,7 @@ func execute_pipelines() string {
 // # 查看流水线构建日志
 func buildLog(runId string) {
 	for {
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Second * 2) // 10秒一次 ， 2秒出问题
 		uri := fmt.Sprintf("/pipeline/api/pipeline/v1/builds/%s", runId)
 		requestCmdb := cmdb.RequestCmdb(uri, cmdb.EasyopsOpenApiHost, cmdb.MethodStrGet, "")
 
@@ -295,18 +250,26 @@ func buildLog(runId string) {
 	}
 }
 
-// 项目构建历史记录
+// 项目构建历史记录  列表
 func pipeline_build_histoery() {
 	uri := "/pipeline/api/pipeline/v1/builds"
 	businessParams := make(map[string]string)
 
 	businessParams["page"] = "1"
 	businessParams["page_size"] = "3000"
-	businessParams["project_id"] = "596404f7fd420"  // 流水线项目ID 596404f7fd420
+	businessParams["project_id"] = "596404f7fd420" // 流水线项目ID 596404f7fd420
 	// businessParams["pipeline_id"] = "5d5ff3fcaffb4" // 流水线ID   5d5ff3fcaffb4
 	businessParams["state"] = ""
 
 	requestCmdb := cmdb.RequestCmdb(uri, cmdb.EasyopsOpenApiHost, cmdb.MethodStrGet, businessParams)
 	log.SetPrefix("\n\n[/pipeline/api/pipeline/v1/builds]返回结果::")
 	log.Println(string(requestCmdb))
+}
+
+// 测试-调试使用
+func test_app() string {
+	res := cmdb.RequestCmdb("/cmdb/toolkit/tools/APP", cmdb.EasyopsOpenApiHost, cmdb.MethodStrGet, "")
+	log.SetPrefix("[test_app]")
+	log.Println(string(res))
+	return string(res)
 }
