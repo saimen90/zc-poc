@@ -25,9 +25,12 @@ func init() {
 
 func main() {
 
-	search_app_project()
+	execute_pipelines()
+
 	return
-	get_pipeline()
+	search_app_project()
+
+	//get_pipeline()
 
 	business_search := business_search()
 
@@ -64,8 +67,8 @@ func business_search() string {
 	businessParams["page_size"] = 3000
 	businessParams["page"] = 1
 	res := cmdb.RequestCmdb("/cmdb/object/BUSINESS/instance/_search", cmdb.EasyopsOpenApiHost, cmdb.MethodStrPOST, businessParams)
-	log.SetPrefix("[business_search]")
-	log.Println(res)
+	log.SetPrefix("\n\n[/cmdb/object/BUSINESS/instance/_search]返回结果::")
+	log.Println(string(res))
 	return ""
 }
 
@@ -91,27 +94,27 @@ func search_app_project() string {
 	businessParams["page_size"] = 3000
 	businessParams["page"] = 1
 	json_str := cmdb.RequestCmdb("/cmdb/object/APP/instance/_search", cmdb.EasyopsOpenApiHost, cmdb.MethodStrPOST, businessParams)
-
+	log.SetPrefix("\n\n[/cmdb/object/APP/instance/_search]返回结果::")
+	log.Println(string(json_str))
 
 	res, _ := simplejson.NewJson([]byte(json_str))
 	projects, _ := res.Get("data").Get("list").Array()
+	// 项目S
 	for i := range projects {
 		projectId, _ := res.Get("data").Get("list").GetIndex(i).Get("instanceId").String()
 		projectName, _ := res.Get("data").Get("list").GetIndex(i).Get("name").String()
 		fmt.Println("应用名称：",projectName,"应用ID：",projectId)
-
+		// 流水线S  #应用所拥有的流水线_代码项目
 		pipelines, _ := res.Get("data").Get("list").GetIndex(i).Get("PIPELINE_PROJECT").Array()
-
-
-		// 流水线名称 ， 流水线id
+		// fmt.Print(pipelines)
 		for _, pipeline := range pipelines {
 			if data, ok := pipeline.(map[string]interface{}); ok {
 				fmt.Println("流水线名称：",data["name"],"流水线ID：",data["instanceId"],"创建人",data["creator"],"创建时间",data["ctime"])
+				//  pipeline["_PIPELINE"] 流水线，变量variables
+				fmt.Print("流水线变量：",data["_PIPELINE"])
 
-				// 需要升级  pipeline["_PIPELINE"]
 			}
 		}
-
 	}
 
 	return ""
@@ -141,23 +144,17 @@ func execute_pipelines() string {
 	pipeline_id := "5a40382f43d16"
 	uri := fmt.Sprintf("/pipeline/api/pipeline/v1/projects/%s/pipelines/%s/execute", project_id, pipeline_id)
 	businessParams := make(map[string]interface{})
-	businessParams["sort"] = map[string]interface{}{
-		"name": 1,
-	}
-	businessParams["fields"] = map[string]interface{}{
-		"name":                                       true,
-		"_businesses_APP":                            true,
-		"instanceId":                                 true,
-		"_businesses_APP.memo":                       true,
-		"developer":                                  true,
-		"_businesses_APP.owner":                      true,
-		"_businesses_APP.tester":                     true,
-		"_businesses_APP.developer":                  true,
-		"_businesses_APP.USER_WB":                    true,
-		"_businesses_APP.PIPELINE_PROJECT":           true,
-		"_businesses_APP.PIPELINE_PROJECT._PIPELINE": true,
-	}
-	 cmdb.RequestCmdb(uri, cmdb.EasyopsOpenApiHost, cmdb.MethodStrPOST, businessParams)
+
+
+	businessParams["branch"] = "master"
+	// businessParams["tag"] = "aaaaaaaa"
+
+	// 流水线变量 [ variables ]
+	// businessParams["inputs"] = map[string]interface{}{}
+
+	requestCmdb := cmdb.RequestCmdb(uri, cmdb.EasyopsOpenApiHost, cmdb.MethodStrPOST, businessParams)
+	log.SetPrefix("\n\n[/pipeline/api/pipeline/v1/projects/%s/pipelines/%s/execute]返回结果::")
+	log.Println(string(requestCmdb))
 
 	return ""
 }
